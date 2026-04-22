@@ -42,6 +42,9 @@ requirements:
     - ${{ compiler('c') }}
     - ${{ stdlib('c') }}
     - ${{ compiler('rust') }}
+    - if: build_platform != target_platform
+      then:
+        - cross-r-base ==${{ r_base }}
     - cargo-bundle-licenses
     - autoconf
     - automake
