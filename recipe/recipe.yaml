@@ -12,10 +12,11 @@ source:
   sha256: e858d06ab55612c6b3bce7805f5682bdd631151fec57fcf3242de3a91370cbd6
   patches:
     - patches/0001-libdir-cargo-build-target.patch
+    - patches/0001-Remove-document-step.patch
 
 build:
   skip: win
-  number: 0
+  number: 1
   dynamic_linking:
     rpaths:
       - lib/R/lib/
@@ -42,6 +43,9 @@ requirements:
     - ${{ compiler('c') }}
     - ${{ stdlib('c') }}
     - ${{ compiler('rust') }}
+    - if: build_platform != target_platform
+      then:
+        - cross-r-base ${{ r_base }}.*
     - cargo-bundle-licenses
     - autoconf
     - automake
