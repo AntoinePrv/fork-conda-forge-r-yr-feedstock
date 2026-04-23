@@ -12,6 +12,7 @@ source:
   sha256: e858d06ab55612c6b3bce7805f5682bdd631151fec57fcf3242de3a91370cbd6
   patches:
     - patches/0001-libdir-cargo-build-target.patch
+    - patches/0001-Remove-document-step.patch
 
 build:
   skip: win
