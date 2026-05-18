@@ -23,31 +23,70 @@ build:
       DISABLE_AUTOBREW: "1"
       EXTENDR_SKIP_BUILD_WRAPPERS: "1"
     content:
-      - |
-        # Make libR findable for Cargo and R wrapper scripts
-        export RUSTFLAGS="-C link-arg=-L${PREFIX}/lib/R/lib ${RUSTFLAGS}"
-        export LD_LIBRARY_PATH="${PREFIX}/lib/R/lib:${LD_LIBRARY_PATH:-}"
-        export DYLD_LIBRARY_PATH="${PREFIX}/lib/R/lib:${DYLD_LIBRARY_PATH:-}"
+      - if: unix
+        then:
+          - |
+            # Make libR findable for Cargo and R wrapper scripts
+            export RUSTFLAGS="-C link-arg=-L${PREFIX}/lib/R/lib ${RUSTFLAGS}"
+            export LD_LIBRARY_PATH="${PREFIX}/lib/R/lib:${LD_LIBRARY_PATH:-}"
+            export DYLD_LIBRARY_PATH="${PREFIX}/lib/R/lib:${DYLD_LIBRARY_PATH:-}"
 
-        ${R} CMD INSTALL --build . ${R_ARGS}
+            ${R} CMD INSTALL --build . ${R_ARGS}
 
-        # Bundle third party licenses from statically linked crates
-        cd src/rust
-        cargo-bundle-licenses --format yaml --output "${SRC_DIR}/THIRDPARTY.yml"
+            # Bundle third party licenses from statically linked crates
+            cd src/rust
+            cargo-bundle-licenses --format yaml --output "${SRC_DIR}/THIRDPARTY.yml"
+      - if: win
+        then:
+          - |
+            @rem R on conda-forge Windows is built with Rtools (MinGW), so Rust
+            @rem must target the GNU ABI. tools/config.R / Makevars.win.in honor
+            @rem CARGO_BUILD_TARGET (paired with rust-std-x86_64-pc-windows-gnu).
+            set "CARGO_BUILD_TARGET=x86_64-pc-windows-gnu"
+
+            @rem Point Rust at R's import library (libR) so the document/wrapper
+            @rem build links, mirroring the upstream Windows CI link flags.
+            set "RUSTFLAGS=-L native=%PREFIX%/lib/R/bin/x64 -l R"
+
+            "%R%" CMD INSTALL --build .
+            if %ERRORLEVEL% neq 0 exit 1
+
+            @rem Bundle third party licenses from statically linked crates
+            cd src\rust
+            cargo-bundle-licenses --format yaml --output "%SRC_DIR%\THIRDPARTY.yml"
+            if %ERRORLEVEL% neq 0 exit 1
 
 requirements:
   build:
-    - ${{ compiler('c') }}
-    - ${{ stdlib('c') }}
+    - if: unix
+      then:
+        - ${{ compiler('c') }}
+        - ${{ stdlib('c') }}
+      else:
+        # Provides the MinGW toolchain matching conda-forge's Rtools-built R.
+        - gcc
+        - rust-std-x86_64-pc-windows-gnu
     - ${{ compiler('rust') }}
     - if: build_platform != target_platform
       then:
         - cross-r-base ${{ r_base }}.*
     - cargo-bundle-licenses
-    - autoconf
-    - automake
-    - pkg-config
-    - make
+    - if: unix
+      then:
+        - autoconf
+        - automake
+        - pkg-config
+        - make
+      else:
+        - m2-autoconf
+        - m2-automake-wrapper
+        - m2-coreutils
+        - m2-filesystem
+        - m2-grep
+        - m2-make
+        - m2-pkg-config
+        - m2-sed
+        - m2-zip
   host:
     - r-base
   run:
