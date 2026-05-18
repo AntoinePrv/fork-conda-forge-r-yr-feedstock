@@ -46,7 +46,10 @@ build:
 
             @rem Point Rust at R's import library (libR) so the document/wrapper
             @rem build links, mirroring the upstream Windows CI link flags.
-            set "RUSTFLAGS=-L native=%PREFIX%/lib/R/bin/x64 -l R"
+            @rem raw-dylib crates (windows-targets, parking_lot_core) need
+            @rem dlltool; conda-forge binutils ships it target-prefixed only,
+            @rem so tell rustc the exact name instead of bare "dlltool.exe".
+            set "RUSTFLAGS=-L native=%PREFIX%/lib/R/bin/x64 -l R -C dlltool=x86_64-w64-mingw32-dlltool.exe"
 
             "%R%" CMD INSTALL --build .
             if %ERRORLEVEL% neq 0 exit 1
